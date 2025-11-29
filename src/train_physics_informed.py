@@ -16,8 +16,9 @@ SAVE_MODEL_PATH = "results/model_physics_tuned.pth"
 LOG_CSV = "results/physics_training_log.csv"
 
 # strong physics influence
-LAMBDA_K = 5.0
-LAMBDA_POROSITY = 5.0
+LAMBDA_K = 100.0
+LAMBDA_POROSITY = 100.0
+num_epochs = 100
 
 TARGETS = {
     "Mean_K": 0.52,      # real avg permeability
