@@ -2,38 +2,30 @@
 Modeling biomimetic xylem-inspired microstructures using AI latent space representations and physical simulation (Camber integration).
 # Synthetic Tree Physics: AI Modeling of Cohesion–Tension Microfluidics
 
--------------------------------------------------------------------------------------
 
-## Abstract
+## 📌 Abstract
 This project investigates the biomechanical principles that enable trees to sustain negative-pressure water transport through microstructured xylem tubes. Using AI-driven latent-space modeling, we simulate and analyze tree-inspired microfluidic geometries to explore synthetic analogues that could replicate or extend these natural fluid-transport systems under extreme conditions. The work integrates procedural geometry generation, unsupervised learning, and physical simulation through Camber.
 
--------------------------------------------------------------------------------------
 
-## Background
+## 📝 Background
 Natural trees maintain continuous water columns over 100 m under extreme tension, leveraging microtubular xylem architectures, surface adhesion, and cavitation resilience. Engineering systems fail under similar negative pressures due to macroscopic instability. By abstracting xylem microstructures as data representations, we aim to identify geometric and material properties that stabilize flow in tension-dominated regimes.
 
--------------------------------------------------------------------------------------
 
-## Objectives
+## 🧠 Objectives
 1. Generate synthetic microtubular geometries resembling xylem cross-sections.
 2. Train an autoencoder to embed these geometries into a latent space organized by fluidic efficiency and cavitation resistance.
 3. Use Camber to simulate fluid transport properties within these geometries.
 4. Identify latent clusters correlating with desirable transport behaviors for synthetic material design.
 
-## 🌿 Morphological Analytics
 
-Once the Synthetic Cambium Growth loop has completed, we can visualize how the model adapts its vascular structure to optimize flow.
-
--------------------------------------------------------------------------------------
-
-### Conductivity Improvement
+## 📍 Conductivity Improvement
 As the latent cambium updates over time, the generated microvascular geometry becomes increasingly efficient at transporting simulated water.
 
 ![](results/morpho_analysis/conductivity_curve.png)
 
--------------------------------------------------------------------------------------
 
-### Morphological Evolution
+## 🌿 Morphological Evolution & Analytics
+Once the Synthetic Cambium Growth loop has completed, we can visualize how the model adapts its vascular structure to optimize flow.
 Below is a timeline of the evolving structures — each frame representing a single cambial feedback iteration.  
 You can see the gradual emergence of more continuous, pressure-optimized channels — synthetic xylem in action.
 
@@ -41,7 +33,7 @@ You can see the gradual emergence of more continuous, pressure-optimized channel
 
 *(Optional)* If latent trajectories were recorded, `latent_drift.png` shows how the system’s internal “genetic code” migrates through its learned material design space.
 
--------------------------------------------------------------------------------------
+
 
 ## 🌳 Synthetic Cambium Feedback Loop (Architecture Overview)
 
@@ -71,9 +63,9 @@ The system models a self-optimizing vascular growth process inspired by real tre
 
 ![](results/architecture_overview.png)
 
--------------------------------------------------------------------------------------
 
-## Repository Structure
+
+## 🔬 Repository Structure
 synthetic_tree_physics/
 │
 ├── data/                      # Generated xylem-like structures
@@ -96,9 +88,9 @@ synthetic_tree_physics/
 └── README.md
 Each script represents one “growth phase” in the synthetic tree pipeline.
 
--------------------------------------------------------------------------------------
 
-## Workflow Overview
+
+## 🧩 Full Pipeline Overview
 
 1. **Generate Structures** – Procedural xylem cross-sections.
 2. **Train Autoencoder** – Learn latent embeddings of structure.
@@ -109,9 +101,9 @@ Each script represents one “growth phase” in the synthetic tree pipeline.
 
 ![](results/architecture_overview.png)
 
--------------------------------------------------------------------------------------
 
-## Results Summary
+
+## 🌿 Results Summary
 
 | Metric | Description | Observation |
 |---------|--------------|-------------|
@@ -120,9 +112,9 @@ Each script represents one “growth phase” in the synthetic tree pipeline.
 | **Latent Drift** | Evolution of the internal "genome" vector | Smooth migration in latent manifold |
 | **Biophysical Analogy** | Tree cambium growth via feedback from flow pressure | Accurate biological parallel |
 
--------------------------------------------------------------------------------------
 
-## Discussion: AI-Driven Material Growth
+
+## 🧠 Scientific Significance
 
 This model demonstrates a *synthetic cambium* — an AI framework that continuously adapts microvascular designs using feedback from physical flow simulation.
 
@@ -132,9 +124,9 @@ By closing the loop between:
 
 …it achieves emergent “intelligent” material adaptation, analogous to biological vascular growth.
 
--------------------------------------------------------------------------------------
 
-## Run Order
+
+## ⚙️ Reproducibility
 
 ```bash
 python3 src/generate_structures.py
@@ -145,7 +137,7 @@ python3 src/synthetic_cambium.py
 python3 src/morpho_analysis.py
 Outputs are stored in /results/, automatically organized by phase.
 
--------------------------------------------------------------------------------------
+
 
 ### 🧬 **Future Extensions**
 
