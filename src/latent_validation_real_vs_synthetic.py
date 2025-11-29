@@ -46,7 +46,7 @@ transform = transforms.Compose([
     transforms.ToTensor()
 ])
 
-def load_images(path, n=20):
+def load_images(path, n=None):
     imgs = []
     valid_ext = (".png", ".jpg", ".jpeg", ".tif", ".tiff")
     for f in sorted(os.listdir(path)):
@@ -55,7 +55,7 @@ def load_images(path, n=20):
             continue
         img = Image.open(full_path).convert("L")
         imgs.append(transform(img).unsqueeze(0))
-        if len(imgs) >= n:
+        if n and len(imgs) >= n:
             break
     return torch.cat(imgs, dim=0)
 
