@@ -38,3 +38,7 @@ synthetic_tree_physics/
 │ └── simulate_fluidics.py
 └── notebooks/
 └── exploration.ipynb
+
+
+![Diagram]("https://imgur.com/a/jOSHWjj")
+
