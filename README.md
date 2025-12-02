@@ -1,147 +1,300 @@
-# synthetic_tree_physics
-Modeling biomimetic xylem-inspired microstructures using AI latent space representations and physical simulation (Camber integration).
-# Synthetic Tree Physics: AI Modeling of Cohesion–Tension Microfluidics
+# Xylem v0.2 – Physics-aware surrogate-guided xylem simulator
 
+**Status:** research snapshot / artifact  
+**Goal:** learn a latent “genetic code” for tree xylem micro-tubes and couple it to a physics surrogate that approximates flow metrics from a numerical solver.
 
-## 📌 Abstract
-This project investigates the biomechanical principles that enable trees to sustain negative-pressure water transport through microstructured xylem tubes. Using AI-driven latent-space modeling, we simulate and analyze tree-inspired microfluidic geometries to explore synthetic analogues that could replicate or extend these natural fluid-transport systems under extreme conditions. The work integrates procedural geometry generation, unsupervised learning, and physical simulation through Camber.
+Xylem v0.2 extends a basic autoencoder + flow-solver pipeline with a learned **surrogate model**.  
+The surrogate is trained to predict flow metrics directly from images and is then used as a **differentiable physics term** during fine-tuning of the generative model.
 
+This version is **not** physically calibrated yet (synthetic samples still deviate from real xylem in absolute metrics), but the full end-to-end machinery is in place:
 
-## 📝 Background
-Natural trees maintain continuous water columns over 100 m under extreme tension, leveraging microtubular xylem architectures, surface adhesion, and cavitation resilience. Engineering systems fail under similar negative pressures due to macroscopic instability. By abstracting xylem microstructures as data representations, we aim to identify geometric and material properties that stabilize flow in tension-dominated regimes.
+- data → images  
+- solver → flow metrics  
+- surrogate CNN → approximate physics  
+- autoencoder → synthetic structures  
+- surrogate-based loss → physics-aware training  
+- evaluation → statistical comparison vs. real xylem
 
+That makes this repository a concrete, reproducible artifact for surrogate-guided physics in generative morphology.
 
-## 🧠 Objectives
-1. Generate synthetic microtubular geometries resembling xylem cross-sections.
-2. Train an autoencoder to embed these geometries into a latent space organized by fluidic efficiency and cavitation resistance.
-3. Use Camber to simulate fluid transport properties within these geometries.
-4. Identify latent clusters correlating with desirable transport behaviors for synthetic material design.
+---
 
+## 1. High-level pipeline
 
-## 📍 Conductivity Improvement
-As the latent cambium updates over time, the generated microvascular geometry becomes increasingly efficient at transporting simulated water.
+1. **Geometry model (XylemAutoencoder)**
+   - Convolutional autoencoder with a low-dimensional latent code.
+   - Trained on real xylem slices + synthetic microtubes.
+   - Learns to reconstruct 2D cross-sections at 256×256 resolution.
 
-![](results/morpho_analysis/conductivity_curve.png)
+2. **Flow solver (reference physics)**
+   - Numerical flow simulation over binarized images.
+   - Produces per-image metrics, e.g.:
+     - `Mean_K` – effective permeability
+     - `Mean_dP/dy` – mean pressure gradient
+     - `FlowRate` – relative flow efficiency
+     - `Porosity` – open-pore fraction
+     - `Anisotropy` – directional bias
 
+3. **Physics surrogate (this version’s main addition)**
+   - Small CNN: **image → [K, dP/dy, flowrate, porosity, anisotropy]**.
+   - Trained to regress solver outputs on a mixed dataset of real + synthetic slices.
+   - Achieves low MSE on a held-out validation split, i.e. it tracks the solver reasonably well.
 
-## 🌿 Morphological Evolution & Analytics
-Once the Synthetic Cambium Growth loop has completed, we can visualize how the model adapts its vascular structure to optimize flow.
-Below is a timeline of the evolving structures — each frame representing a single cambial feedback iteration.  
-You can see the gradual emergence of more continuous, pressure-optimized channels — synthetic xylem in action.
+4. **Surrogate-based physics fine-tuning**
+   - Autoencoder reconstructions are passed through the surrogate.
+   - Physics loss encourages surrogate-predicted metrics for synthetic images to move toward real-xylem targets.
+   - Total loss:
+     \[
+       \mathcal{L}_\text{total} = \mathcal{L}_\text{recon} + \lambda_\text{phys} \cdot \mathcal{L}_\text{physics}
+     \]
+   - This gives a fully differentiable, end-to-end training loop with a physics-inspired objective.
 
-![](results/morpho_analysis/morphology_timeline.png)
+5. **Evaluation**
+   - Flow solver is run again on real vs. synthetic samples.
+   - Metrics are compared via summary statistics and basic hypothesis tests (t-test, KS test).
+   - In v0.2, the **pipeline is working**, but synthetic distributions are still mis-calibrated (p-values ≪ 0.05 across metrics).
 
-*(Optional)* If latent trajectories were recorded, `latent_drift.png` shows how the system’s internal “genetic code” migrates through its learned material design space.
+---
 
+## 2. Repository layout (v0.2)
 
+Root:
 
-## 🌳 Synthetic Cambium Feedback Loop (Architecture Overview)
-
-The system models a self-optimizing vascular growth process inspired by real trees.
-
-1. **Latent Cambium (`z`)**  
-   Acts as the “genome” of the structure — a compact numerical code representing a potential microvascular design.
-
-2. **Decoder → Synthetic Xylem**  
-   The autoencoder’s decoder transforms `z` into a 2D structure image.  
-   This corresponds to *newly formed vascular tissue* in the biological analogy.
-
-3. **Flow Simulation**  
-   A physics engine simulates how water (or sap) would move through the structure, producing:
-   - Pressure field
-   - Conductivity metric
-
-4. **Cambial Feedback (Growth Rule)**  
-   Pressure gradients act as “growth signals.”  
-   The model adjusts its latent code:  
-   `z ← z + α * ∇(flow_efficiency)`  
-   — reinforcing channels that improve hydraulic performance.
-
-5. **Morphological Analytics**  
-   Over many iterations, the model’s vascular geometry evolves —  
-   conductivity rises, channels self-organize, and the synthetic “tree” learns how to grow.
-
-![](results/architecture_overview.png)
-
-
-
-## 🔬 Repository Structure
-synthetic_tree_physics/
+```text
+.
+├── data/
+│   ├── generated_microtubes/        # synthetic samples generated by the model
+│   ├── real_xylem/                  # (optional) original real xylem slices
+│   ├── real_xylem_preprocessed/     # preprocessed 256×256 grayscale inputs
+│   ├── real_xylem_raw/              # raw source images (if available)
+│   └── .gitkeep                     # placeholder; real data may be omitted
 │
-├── data/                      # Generated xylem-like structures
-│   └── generated_microtubes/
+├── results/
+│   ├── flow_metrics/                # flow_metrics.csv and related exports
+│   ├── flow_simulation/             # logs/plots from simulate_flow.py
+│   ├── hybrid_training/             # hybrid autoencoder training outputs
+│   ├── latent_analysis/             # latent space diagnostics
+│   ├── latent_physics_map/          # latent → physics projections
+│   ├── latent_validation/           # real vs synthetic latent comparisons
+│   ├── metric_distributions/        # histograms / KDEs for metrics
+│   ├── morpho_analysis/             # morphology-focused plots
+│   ├── morphology_analysis/         # (legacy) extra morphology analysis
+│   ├── morphology_metrics/          # CSVs for structural features
+│   ├── optimization/                # optimization logs/experiments
+│   ├── physics_informed_training/   # logs for physics-aware runs
+│   ├── cambium_growth/              # (reserved) cambium growth experiments
+│   ├── model.pth                    # baseline autoencoder
+│   ├── model_hybrid.pth             # hybrid-trained autoencoder
+│   ├── model_physics_informed.pth   # (if used) physics-informed checkpoint
+│   ├── model_physics_tuned.pth      # physics-tuned model in earlier runs
+│   ├── physics_surrogate.pth        # trained surrogate CNN (v0.2)
+│   ├── physics_surrogate_meta.pt    # metadata (normalization, etc.)
+│   ├── physics_training_log.csv     # logs for physics-aware AE training
+│   ├── physics_validation_report.csv        # solver-based metric comparison
+│   ├── physics_validation_report_*.csv     # variants across runs
+│   ├── physics_comparison_report.csv       # extra comparison utilities
+│   ├── surrogate_dataset.pt         # tensors for surrogate training
+│   ├── recon_epoch_*.png            # reconstruction snapshots
+│   └── Mean_K_distribution.png      # example diagnostic plot
 │
-├── results/                   # Model checkpoints, reconstructions, analytics
-│   ├── cambium_growth/
-│   └── morpho_analysis/
+├── src/
+│   ├── __init__.py
+│   ├── model.py                     # XylemAutoencoder definition
+│   ├── train.py                     # base AE training on real data
+│   ├── train_hybrid.py              # hybrid training (real + synthetic)
+│   ├── build_surrogate_dataset.py   # builds images + metrics dataset
+│   ├── train_surrogate.py           # trains PhysicsSurrogateCNN
+│   ├── train_physics_informed.py    # v0.2: surrogate-based fine-tuning
+│   ├── generate_structures.py       # decode latent codes → synthetic images
+│   ├── flow_simulation_utils.py     # shared flow solver utilities
+│   ├── flow_simulation.py           # runs solver over real + synthetic sets
+│   ├── flow_metrics_export.py       # exports per-image flow metrics
+│   ├── analyze_flow_metrics.py      # aggregates + plots solver metrics
+│   ├── analyze_latent.py            # latent structure diagnostics
+│   ├── analyze_morphology.py        # shape + pore-network analysis
+│   ├── morpho_analysis.py           # higher-level structural comparisons
+│   ├── morphology_metrics.py        # morphological feature extraction
+│   ├── morphological_convergence_*.py  # convergence experiments
+│   ├── map_latent_to_physics.py     # latent → physics mapping tools
+│   ├── optimize_structures.py       # search in latent space for targets
+│   ├── simulate_flow.py             # lower-level flow simulator wrapper
+│   ├── synthetic_cambium.py         # cambium-growth generative experiments
+│   ├── preprocess_real_xylem.py     # preprocessing for raw real images
+│   ├── morphology_dashboard.py      # (optional) interactive dashboards
+│   ├── requirements.txt             # Python dependencies for src/
+│   └── train_surrogate.py           # (duplicate listing for clarity)
 │
-├── src/                       # Source scripts for each phase
-│   ├── generate_structures.py
-│   ├── model.py
-│   ├── train.py
-│   ├── analyze_latent.py
-│   ├── optimize_structures.py
-│   ├── synthetic_cambium.py
-│   └── morpho_analysis.py
-│
-├── requirements.txt
-└── README.md
-Each script represents one “growth phase” in the synthetic tree pipeline.
+├── README.md
+├── LICENSE
+├── .gitignore
+└── requirements.txt                 # top-level environment (optional)
+````
 
+> Note: some folders in `results/` and `data/` may contain only `.gitkeep` or local files and are included here to document the expected structure.
 
+---
 
-## 🧩 Full Pipeline Overview
+## 3. Data
 
-1. **Generate Structures** – Procedural xylem cross-sections.
-2. **Train Autoencoder** – Learn latent embeddings of structure.
-3. **Analyze Latent Space** – Visualize clusters by flow efficiency.
-4. **Optimize Structures** – Reinforce conductive features.
-5. **Synthetic Cambium** – Feedback-driven latent growth.
-6. **Morphological Analytics** – Plot conductivity, evolution, and drift.
+This repository assumes access to **2D xylem cross-section images**:
 
-![](results/architecture_overview.png)
+* `data/real_xylem_raw/` – optional raw microscopy or CT slices.
+* `data/real_xylem_preprocessed/` – resized, grayscale, normalized images used for training (e.g. 256×256).
+* `data/generated_microtubes/` – synthetic images produced by the model.
+* Ground-truth physics metrics are produced **on the fly** via the flow solver; they are saved into `results/flow_metrics/flow_metrics.csv` and related CSVs.
 
+Real biological data may not be distributed in the public repo; users should provide their own compatible dataset if needed.
 
+---
 
-## 🌿 Results Summary
+## 4. Training and evaluation (v0.2 recipe)
 
-| Metric | Description | Observation |
-|---------|--------------|-------------|
-| **Conductivity** | Effective water transport under negative pressure | ↑ Improved with each feedback iteration |
-| **Morphological Order** | Vascular continuity & branching optimization | Emergent, tree-like patterns |
-| **Latent Drift** | Evolution of the internal "genome" vector | Smooth migration in latent manifold |
-| **Biophysical Analogy** | Tree cambium growth via feedback from flow pressure | Accurate biological parallel |
+The following commands illustrate the **v0.2 surrogate-based workflow**.
+(Assumes a working Python environment with PyTorch installed and `cd` into the project root.)
 
-
-
-## 🧠 Scientific Significance
-
-This model demonstrates a *synthetic cambium* — an AI framework that continuously adapts microvascular designs using feedback from physical flow simulation.
-
-By closing the loop between:
-- **Generative AI (form)**
-- **Physics Simulation (function)**
-
-…it achieves emergent “intelligent” material adaptation, analogous to biological vascular growth.
-
-
-
-## ⚙️ Reproducibility
+### 4.1. Set up environment
 
 ```bash
-python3 src/generate_structures.py
+pip install -r src/requirements.txt
+# If needed (CPU-only example):
+pip install torch torchvision
+```
+
+### 4.2. Train / reuse the autoencoder
+
+If you start from scratch:
+
+```bash
+# Base autoencoder on real xylem
 python3 src/train.py
-python3 src/analyze_latent.py
-python3 src/optimize_structures.py
-python3 src/synthetic_cambium.py
-python3 src/morpho_analysis.py
 
+# Hybrid training: real + previously generated synthetic
+python3 src/train_hybrid.py
+```
 
-### 🧬 **Future Extensions**
+In v0.2, we typically assume `results/model_hybrid.pth` already exists and is used as the starting checkpoint.
 
-```markdown
-## Future Work
+### 4.3. Build surrogate dataset
 
-- Extend to **3D microvascular simulation** using voxel grids.
-- Integrate **mechanical stress feedback** alongside hydraulic flow.
-- Apply to **bioengineered scaffolds**, **microfluidic chips**, or **synthetic plant tissues**.
+Run the solver over a mix of real + synthetic images and package the results:
+
+```bash
+python3 src/build_surrogate_dataset.py
+```
+
+This will:
+
+* Load images from `data/real_xylem_preprocessed/` and `data/generated_microtubes/`.
+* Look up corresponding solver metrics from `results/flow_metrics/flow_metrics.csv`.
+* Save tensors to `results/surrogate_dataset.pt`.
+
+### 4.4. Train the physics surrogate CNN
+
+```bash
+python3 src/train_surrogate.py
+```
+
+Outputs:
+
+* `results/physics_surrogate.pth` – trained CNN weights.
+* `results/physics_surrogate_meta.pt` – metadata (normalization, metric names).
+* Console logs with train/validation MSE; the best checkpoint is selected by validation loss.
+
+### 4.5. Surrogate-based physics fine-tuning (Xylem v0.2)
+
+```bash
+python3 src/train_physics_informed.py
+```
+
+This script:
+
+* Loads `model_hybrid.pth` (geometry) and `physics_surrogate.pth` (surrogate).
+* Computes real-xylem target means from the latest solver metrics.
+* Fine-tunes the autoencoder using a combined reconstruction + surrogate-physics loss.
+* Logs per-epoch:
+
+  * reconstruction loss
+  * physics loss
+  * surrogate-predicted mean metrics
+  * gradient norm
+  * λ_phys (physics weight)
+* Saves the tuned model to `results/model_physics_informed.pth` and logs to `results/physics_training_log.csv`.
+
+### 4.6. Generate synthetic structures
+
+```bash
+python3 src/generate_structures.py --model results/model_physics_informed.pth --n 64
+```
+
+Outputs:
+
+* PNG images in `data/generated_microtubes/`
+* `generation_log.csv` in the same directory.
+
+### 4.7. Run flow simulation and compare physics
+
+```bash
+python3 src/flow_simulation.py
+python3 src/analyze_flow_metrics.py
+```
+
+These will:
+
+* Run the numerical solver over real and synthetic images.
+* Save `results/flow_metrics/flow_metrics.csv`.
+* Produce `results/physics_validation_report.csv` with side-by-side statistics and basic hypothesis tests.
+
+In Xylem v0.2, the key result is that:
+
+* The surrogate term is active and differentiable.
+* Metrics move in a **physics-informed** direction, but the **absolute calibration** between real and synthetic ensembles is still off (p-values remain ≪ 0.05 across metrics).
+
+---
+
+## 5. Limitations and next directions
+
+Xylem v0.2 is intentionally frozen as a **work-in-progress artifact**, not a finished scientific result.
+
+Known limitations:
+
+* **Calibration gap:** synthetic samples remain mis-aligned in `Mean_K`, `Porosity`, and `FlowRate` distributions relative to real xylem.
+* **Small surrogate dataset:** the physics surrogate is trained on a limited number of real + synthetic slices.
+* **Single-scale representation:** only one spatial resolution and a single 2D cross-section per sample are considered.
+* **Solver specificity:** the surrogate is tied to a particular flow-solver configuration.
+
+Future work (beyond this tag):
+
+* Increase surrogate dataset size and diversity.
+* Explore uncertainty-aware or multi-task surrogates.
+* Add explicit regularization on pore topology and connectivity.
+* Investigate temperature / pressure-dependent regimes and multi-scale structures.
+
+---
+
+## 6. Versioning
+
+This README describes the **Xylem v0.2** snapshot, where:
+
+* A physics surrogate CNN is trained on solver outputs.
+* The surrogate is integrated as a differentiable physics-aware term in autoencoder training.
+* The full pipeline from data → geometry → surrogate → solver → validation is exercised.
+
+To freeze this state in Git:
+
+```bash
+git add .
+git commit -m "Xylem v0.2: surrogate-based physics fine-tuning artifact"
+git tag -a v0.2 -m "Xylem v0.2 – surrogate-guided physics-aware xylem generator"
+git push origin main
+git push origin v0.2
+```
+
+---
+
+## 7. License and citation
+
+See `LICENSE` for usage terms.
+
+If you reference this repository in academic or technical work, you can cite it informally as:
+
+> Xylem v0.2: surrogate-guided physics-aware xylem morphology generator (2025). GitHub repository, [https://github.com/ItsReallyDanii/Xylem-v0.2](https://github.com/ItsReallyDanii/Xylem-v0.2)
